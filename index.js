@@ -126,6 +126,7 @@ async function run() {
     // });
 
     // get recipe for user added
+
     app.get("/api/recipes", verifyToken, verifyUser, async (req, res) => {
       const query = {};
       if (req.query.userId) {
@@ -141,8 +142,55 @@ async function run() {
     });
 
     // public api
-    app.get("/api/allrecipes", async (req, res) => {});
+    app.get("/api/allrecipes", async (req, res) => {
+      try {
+        const { category, page = 1, limit = 10 } = req.query;
 
+        const query = {};
+        if (category) {
+          query.category = category;
+        }
+        const currentPage = Number(page);
+        const perPage = Number(limit);
+
+        const skip = (currentPage - 1) * perPage;
+        const recipes = await recipesCollection
+          .find(query)
+          .skip(skip)
+          .limit(perPage)
+          .toArray();
+        const totalRecipes = await recipesCollection.countDocuments(query);
+        res.status(200).json({
+          status: true,
+          data: recipes,
+          pagination: {
+            totalRecipes,
+            currentPage,
+            totalPages: Math.ceil(totalRecipes / perPage),
+            perPage,
+          },
+        });
+      } catch (error) {
+        res.status(500).json({
+          status: false,
+          message: error.message,
+        });
+      }
+    });
+    app.get("/api/recipedetails/:id", async (req, res) => {
+      const { id } = req.params;
+      const query = {
+        _id: new ObjectId(id),
+      };
+      const result = await recipesCollection.findOne(query);
+      res
+        .status(200)
+        .json({
+          status: true,
+          message: "single recipe fetched successfully",
+          data: result,
+        });
+    });
     // recipe related api
     app.get("/api/popular/recipe", async (req, res) => {
       const result = await recipesCollection
@@ -159,12 +207,11 @@ async function run() {
       const result = await recipesCollection
         .find({ isFeatured: true })
         .toArray();
-      res
-        .status(200)
-        .json({
-          status: true,
-          message: "featrue recipe fetched successfullly",
-        });
+      res.status(200).json({
+        status: true,
+        message: "featrue recipe fetched successfullly",
+        data: result,
+      });
     });
     app.get(
       "/api/singlerecipe/:id",
