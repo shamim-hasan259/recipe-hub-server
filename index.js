@@ -144,6 +144,28 @@ async function run() {
     app.get("/api/allrecipes", async (req, res) => {});
 
     // recipe related api
+    app.get("/api/popular/recipe", async (req, res) => {
+      const result = await recipesCollection
+        .find()
+        .sort({ likeCount: -1 })
+        .toArray();
+      res.status(200).json({
+        status: true,
+        message: "popular recipe fetched successfully",
+        data: result,
+      });
+    });
+    app.get("/api/feature/recipe", async (req, res) => {
+      const result = await recipesCollection
+        .find({ isFeatured: true })
+        .toArray();
+      res
+        .status(200)
+        .json({
+          status: true,
+          message: "featrue recipe fetched successfullly",
+        });
+    });
     app.get(
       "/api/singlerecipe/:id",
       verifyToken,
@@ -200,14 +222,15 @@ async function run() {
         });
       },
     );
-
     app.delete(
       "/api/deletercipe/:id",
       verifyToken,
       verifyUser,
       async (req, res) => {
         const { id } = req.params;
-        const result = await recipesCollection.deleteOne(id);
+        const result = await recipesCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
         res
           .status(200)
           .json({ status: true, message: "delete recipe successfully" });
