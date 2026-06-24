@@ -40,7 +40,7 @@ const verifyToken = async (req, res, next) => {
     return res.status(401).json({ msg: "Unauthorized" });
   }
   const token = authHeader.split(" ")[1];
-  // console.log(token);
+  console.log(token);
 
   if (!token) {
     return res.status(401).json({ msg: "Unauthorized" });
@@ -73,31 +73,95 @@ async function run() {
     await client.connect();
     const recipeHubDB = client.db("recipe-hub");
     const recipesCollection = recipeHubDB.collection("recipes");
-    const userCollection = recipeHubDB.collection("user");
+    const usersCollection = recipeHubDB.collection("user");
+    const subscriptionsCollection = recipeHubDB.collection("subscriptions");
+    const reportCollection = recipeHubDB.collection("reports");
+    const favouritesCollectio = recipeHubDB.collection("favourites");
+    // subscription related api
+    app.post(
+      "/api/subscriptions",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const { sessionId, userId, priceId } = req.body;
+        const exist = await subscriptionsCollection.findOne({ userId });
+        if (exist) {
+          return res.json({ message: "Already Exsist" });
+        }
 
-    // user related api
+        const subucriptionData = await subscriptionsCollection.insertOne({
+          sessionId,
+          userId,
+          priceId,
+          createdAt: new Date(),
+        });
 
-    app.patch("/api/user/:id", async (req, res) => {
-      const { id } = req.params;
-
-      const result = await usersCollection.updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $inc: {
-            limit: 1,
+        await usersCollection.updateOne(
+          { _id: new ObjectId(userId) },
+          {
+            $set: {
+              plan: "premium",
+            },
           },
-        },
-      );
+        );
+      },
+    );
 
+    // // user related api
+    // app.patch("/api/user/:id", verifyToken, verifyUser, async (req, res) => {
+    //   const { id } = req.params;
+    //   const result = await usersCollection.updateOne(
+    //     { _id: new ObjectId(id) },
+    //     {
+    //       $inc: {
+    //         limit: 1,
+    //       },
+    //     },
+    //   );
+    //   res.status(200).json({
+    //     success: true,
+    //     message: "Limit increased successfully",
+    //     data: result,
+    //   });
+    // });
+
+    // get recipe for user added
+    app.get("/api/recipes", verifyToken, verifyUser, async (req, res) => {
+      const query = {};
+      if (req.query.userId) {
+        query.userId = req.query.userId;
+      }
+      const result = await recipesCollection.find(query).toArray();
+      // console.log("result", result);
       res.status(200).json({
-        success: true,
-        message: "Limit increased successfully",
+        status: true,
+        message: "recipe fectched successfully",
         data: result,
       });
     });
 
     // public api
     app.get("/api/allrecipes", async (req, res) => {});
+
+    // recipe related api
+    app.get(
+      "/api/singlerecipe/:id",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const { id } = req.params;
+        console.log(id);
+        const query = {
+          _id: new ObjectId(id),
+        };
+        const result = await recipesCollection.findOne(query);
+        res.status(200).json({
+          status: true,
+          message: "single recipe fetched successfully",
+          data: result,
+        });
+      },
+    );
 
     app.post("/api/recipes", verifyToken, verifyUser, async (req, res) => {
       const body = req.body;
@@ -106,12 +170,77 @@ async function run() {
         createdAt: new Date(),
       };
       const result = await recipesCollection.insertOne(data);
+
       res.status(201).json({
         status: true,
         message: "recipe created successfully",
         data: result,
       });
     });
+
+    app.patch(
+      "/api/updaterecipe/:id",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const result = await recipesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: updateData,
+          },
+        );
+
+        res.status(200).json({
+          status: true,
+          message: "update recipe successfully",
+          data: result,
+        });
+      },
+    );
+
+    app.delete(
+      "/api/deletercipe/:id",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const { id } = req.params;
+        const result = await recipesCollection.deleteOne(id);
+        res
+          .status(200)
+          .json({ status: true, message: "delete recipe successfully" });
+      },
+    );
+
+    app.patch("/api/recipes/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await recipesCollection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $inc: {
+            likesCount: 1,
+          },
+        },
+      );
+    });
+    // recipe report
+    app.post("/api/recipe/report", async (req, res) => {
+      const result = await reportCollection.insertOne(req.body);
+      res.status(201).json({ status: true, message: "report successfully" });
+    });
+    app.get(
+      "/api/recipe/report/get",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await reportCollection.find().toArray();
+        res
+          .status(201)
+          .json({ status: true, message: "get report successfully" });
+      },
+    );
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!",
