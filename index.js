@@ -1,6 +1,5 @@
 const dns = require("node:dns");
 dns.setServers(["1.1.1.1", "1.0.0.1"]);
-
 const express = require("express");
 const dontenv = require("dotenv");
 const cors = require("cors");
@@ -109,7 +108,6 @@ async function run() {
     );
 
     // payment related api
-
     app.post("/api/payments", verifyToken, verifyUser, async (req, res) => {
       const data = req.body;
       const paymentsData = {
@@ -121,35 +119,17 @@ async function run() {
     });
 
     app.get("/api/getpayments", verifyToken, verifyUser, async (req, res) => {
-      const result = await paymentCollection.find().toArray();
-      res
-        .status(200)
-        .json({
-          status: true,
-          message: "payments data fecteched successfully",
-          data: result,
-        });
+      const query = {};
+      if (req.query.userId) {
+        query.userId = req.query.userId;
+      }
+      const result = await paymentCollection.find(query).toArray();
+      res.status(200).json({
+        status: true,
+        message: "payments data fecteched successfully",
+        data: result,
+      });
     });
-
-    // // user related api
-    // app.patch("/api/user/:id", verifyToken, verifyUser, async (req, res) => {
-    //   const { id } = req.params;
-    //   const result = await usersCollection.updateOne(
-    //     { _id: new ObjectId(id) },
-    //     {
-    //       $inc: {
-    //         limit: 1,
-    //       },
-    //     },
-    //   );
-    //   res.status(200).json({
-    //     success: true,
-    //     message: "Limit increased successfully",
-    //     data: result,
-    //   });
-    // });
-
-    // get recipe for user added
 
     app.get("/api/recipes", verifyToken, verifyUser, async (req, res) => {
       const query = {};
@@ -328,7 +308,12 @@ async function run() {
 
     // add fouvourite recipe
     app.get("/api/get/favourite", verifyToken, verifyUser, async (req, res) => {
-      const result = await favouritesCollectio.find().toArray();
+      const query = {};
+      if (req.query.userId) {
+        query.userId = req.query.userId;
+      }
+
+      const result = await favouritesCollectio.find(query).toArray();
       res
         .status(200)
         .json({ status: true, message: "fetched all favourite", data: result });
@@ -357,9 +342,8 @@ async function run() {
       verifyUser,
       async (req, res) => {
         const { id } = req.params;
-        console.log(id);
         const query = {
-          _id: id,
+          _id: new ObjectId(id),
         };
         const result = await favouritesCollectio.deleteOne(query);
         console.log(result);
