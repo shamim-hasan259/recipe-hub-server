@@ -77,6 +77,7 @@ async function run() {
     const subscriptionsCollection = recipeHubDB.collection("subscriptions");
     const reportCollection = recipeHubDB.collection("reports");
     const favouritesCollectio = recipeHubDB.collection("favourites");
+    const paymentCollection = recipeHubDB.collection("payments");
     // subscription related api
     app.post(
       "/api/subscriptions",
@@ -106,6 +107,29 @@ async function run() {
         );
       },
     );
+
+    // payment related api
+
+    app.post("/api/payments", verifyToken, verifyUser, async (req, res) => {
+      const data = req.body;
+      const paymentsData = {
+        ...data,
+        createdAt: new Date(),
+      };
+      const result = await paymentCollection.insertOne(paymentsData);
+      res.status(201).json({ status: true, message: "payments successfully" });
+    });
+
+    app.get("/api/getpayments", verifyToken, verifyUser, async (req, res) => {
+      const result = await paymentCollection.find().toArray();
+      res
+        .status(200)
+        .json({
+          status: true,
+          message: "payments data fecteched successfully",
+          data: result,
+        });
+    });
 
     // // user related api
     // app.patch("/api/user/:id", verifyToken, verifyUser, async (req, res) => {
@@ -193,7 +217,7 @@ async function run() {
     app.get("/api/popular/recipe", async (req, res) => {
       const result = await recipesCollection
         .find()
-        .sort({ likeCount: -1 })
+        .sort({ likeCount: 1 })
         .toArray();
       res.status(200).json({
         status: true,
@@ -335,7 +359,7 @@ async function run() {
         const { id } = req.params;
         console.log(id);
         const query = {
-          _id: new ObjectId(id),
+          _id: id,
         };
         const result = await favouritesCollectio.deleteOne(query);
         console.log(result);
