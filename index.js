@@ -183,13 +183,11 @@ async function run() {
         _id: new ObjectId(id),
       };
       const result = await recipesCollection.findOne(query);
-      res
-        .status(200)
-        .json({
-          status: true,
-          message: "single recipe fetched successfully",
-          data: result,
-        });
+      res.status(200).json({
+        status: true,
+        message: "single recipe fetched successfully",
+        data: result,
+      });
     });
     // recipe related api
     app.get("/api/popular/recipe", async (req, res) => {
@@ -280,26 +278,83 @@ async function run() {
         });
         res
           .status(200)
-          .json({ status: true, message: "delete recipe successfully" });
+          .json({ status: true, message: " recipe delete successfully" });
       },
     );
 
-    app.patch("/api/recipes/:id", async (req, res) => {
-      const { id } = req.params;
-      const result = await recipesCollection.updateOne(
-        { _id: new ObjectId(id) },
-        {
-          $inc: {
-            likesCount: 1,
+    app.patch(
+      "/api/incrementlike/:id",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const { id } = req.params;
+        const result = await recipesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $inc: {
+              likesCount: 1,
+            },
           },
-        },
-      );
+        );
+        res
+          .status(200)
+          .json({ status: true, message: "like this updated successfully" });
+      },
+    );
+
+    // add fouvourite recipe
+    app.get("/api/get/favourite", verifyToken, verifyUser, async (req, res) => {
+      const result = await favouritesCollectio.find().toArray();
+      res
+        .status(200)
+        .json({ status: true, message: "fetched all favourite", data: result });
     });
+    app.post(
+      "/api/add/fovourite",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const data = req.body;
+        const favourite = {
+          ...data,
+          createdAt: new Date(),
+        };
+        const result = await favouritesCollectio.insertOne(favourite);
+        console.log("result", result);
+        res
+          .status(201)
+          .json({ status: true, message: "add to favaourite successfully" });
+      },
+    );
+
+    app.delete(
+      "/api/deletefavourite/:id",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const { id } = req.params;
+        console.log(id);
+        const query = {
+          _id: new ObjectId(id),
+        };
+        const result = await favouritesCollectio.deleteOne(query);
+        console.log(result);
+        res.status(200).json({
+          status: true,
+          message: "favourite recipe delete successfully",
+        });
+      },
+    );
     // recipe report
-    app.post("/api/recipe/report", async (req, res) => {
-      const result = await reportCollection.insertOne(req.body);
-      res.status(201).json({ status: true, message: "report successfully" });
-    });
+    app.post(
+      "/api/recipe/report",
+      verifyToken,
+      verifyUser,
+      async (req, res) => {
+        const result = await reportCollection.insertOne(req.body);
+        res.status(201).json({ status: true, message: "report successfully" });
+      },
+    );
     app.get(
       "/api/recipe/report/get",
       verifyToken,
