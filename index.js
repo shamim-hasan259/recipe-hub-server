@@ -77,6 +77,28 @@ async function run() {
     const reportCollection = recipeHubDB.collection("reports");
     const favouritesCollectio = recipeHubDB.collection("favourites");
     const paymentCollection = recipeHubDB.collection("payments");
+
+    // user related api
+    app.get("/api/total/user", verifyToken, verifyAdmin, async (req, res) => {
+      const users = await usersCollection.find().toArray();
+      res.status(200).json({
+        status: true,
+        message: "all user fetched successfully",
+        data: users,
+      });
+    });
+
+    app.get("/api/premium/user", verifyToken, verifyAdmin, async (req, res) => {
+      const premiumUser = await usersCollection
+        .find({ plan: "premium" })
+        .toArray();
+      res.status(200).json({
+        status: true,
+        message: "all premium use fetched successfully",
+        data: premiumUser,
+      });
+    });
+
     // subscription related api
     app.post(
       "/api/subscriptions",
@@ -369,9 +391,11 @@ async function run() {
       verifyAdmin,
       async (req, res) => {
         const result = await reportCollection.find().toArray();
-        res
-          .status(201)
-          .json({ status: true, message: "get report successfully" });
+        res.status(201).json({
+          status: true,
+          message: "get report successfully",
+          data: result,
+        });
       },
     );
     await client.db("admin").command({ ping: 1 });
