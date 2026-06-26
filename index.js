@@ -99,6 +99,33 @@ async function run() {
       });
     });
 
+    app.patch(
+      "/api/user/block/unblock/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        const { newBlockStatus } = req.body;
+
+        // console.log( typeofnewBlockStatus);
+        const query = {
+          _id: new ObjectId(id),
+        };
+        const updateUser = {
+          $set: { isBlocked: newBlockStatus },
+        };
+        const result = await usersCollection.updateOne(query, updateUser);
+        console.log(result);
+        res.status(200).json({
+          status: true,
+          message:
+            updateUser === "true"
+              ? "user blocked successfully"
+              : "user unblocked succefully",
+        });
+      },
+    );
+
     // subscription related api
     app.post(
       "/api/subscriptions",
@@ -126,6 +153,10 @@ async function run() {
             },
           },
         );
+
+        res
+          .status(200)
+          .json({ status: true, message: "user plan update successfully" });
       },
     );
 
