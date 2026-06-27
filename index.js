@@ -5,6 +5,7 @@ const dontenv = require("dotenv");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
+const { log } = require("node:console");
 dontenv.config();
 
 const uri = process.env.MONGO_URI;
@@ -144,7 +145,6 @@ async function run() {
           priceId,
           createdAt: new Date(),
         });
-
         await usersCollection.updateOne(
           { _id: new ObjectId(userId) },
           {
@@ -157,6 +157,20 @@ async function run() {
         res
           .status(200)
           .json({ status: true, message: "user plan update successfully" });
+      },
+    );
+
+    app.get(
+      "/api/subscrition/get",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const result = await subscriptionsCollection.find().toArray();
+        res.status(200).json({
+          status: true,
+          message: "subscription fetched successfully",
+          data: result,
+        });
       },
     );
 
@@ -268,10 +282,30 @@ async function run() {
         data: result,
       });
     });
+
     app.get(
       "/api/singlerecipe/:id",
       verifyToken,
       verifyUser,
+      async (req, res) => {
+        const { id } = req.params;
+        console.log(id);
+        const query = {
+          _id: new ObjectId(id),
+        };
+        const result = await recipesCollection.findOne(query);
+        res.status(200).json({
+          status: true,
+          message: "single recipe fetched successfully",
+          data: result,
+        });
+      },
+    );
+
+    app.get(
+      "/api/singlerecipe/admin/:id",
+      verifyToken,
+      verifyAdmin,
       async (req, res) => {
         const { id } = req.params;
         console.log(id);
@@ -335,10 +369,9 @@ async function run() {
         });
         res
           .status(200)
-          .json({ status: true, message: " recipe delete successfully" });
+          .json({ status: true, message: "recipe delete successfully" });
       },
     );
-
     app.patch(
       "/api/incrementlike/:id",
       verifyToken,
@@ -356,6 +389,68 @@ async function run() {
         res
           .status(200)
           .json({ status: true, message: "like this updated successfully" });
+      },
+    );
+
+    // edit and delete recipe for admin
+    app.patch(
+      "/api/updaterecipe/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const result = await recipesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: updateData,
+          },
+        );
+        res.status(200).json({
+          status: true,
+          message: "update recipe successfully",
+          data: result,
+        });
+      },
+    );
+    app.patch(
+      "/api/updaterfeatue/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        console.log(log);
+
+        const result = await recipesCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: { isFeatured: true },
+          },
+        );
+        console.log(result);
+
+        res.status(200).json({
+          status: true,
+          message: "Recipe marked as featured successfully",
+          data: result,
+        });
+      },
+    );
+    app.delete(
+      "/api/deletercipe/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        console.log(id);
+        const result = await recipesCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        console.log(result);
+        res
+          .status(200)
+          .json({ status: true, message: "admin recipe delete successfully" });
       },
     );
 
