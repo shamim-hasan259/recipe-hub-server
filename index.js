@@ -248,6 +248,19 @@ async function run() {
         });
       }
     });
+
+    // menej all recipe
+    app.get("/api/all/recipe", verifyToken, verifyAdmin, async (req, res) => {
+      const result = await recipesCollection.find().toArray();
+      res
+        .status(200)
+        .json({
+          status: true,
+          message: "all recipe fetched for admin",
+          data: result,
+        });
+    });
+
     app.get("/api/recipedetails/:id", async (req, res) => {
       const { id } = req.params;
       const query = {
@@ -520,6 +533,24 @@ async function run() {
         res.status(201).json({
           status: true,
           message: "get report successfully",
+          data: result,
+        });
+      },
+    );
+
+    app.delete(
+      "/api/delete/reoprt/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        const query = {
+          _id: new ObjectId(id),
+        };
+        const result = await reportCollection.deleteOne(query);
+        res.status(200).json({
+          status: true,
+          message: "delete report successfully",
           data: result,
         });
       },
